@@ -31,3 +31,23 @@ class Job(BaseModel):
 
 class JobSearchResponse(BaseModel):
     jobs: List[Job]
+
+class MatchEvaluation(BaseModel):
+    score: int
+    reasoning: str
+    strengths: List[str]
+    missing_skills: List[str]
+
+
+# ---------- Final Response ----------
+
+class JobRecommendation(BaseModel):
+    job: Job
+    score: int
+    reasoning: str
+    strengths: List[str]
+    missing_skills: List[str]
+
+
+class JobMatchResponse(BaseModel):
+    matched_jobs: List[JobRecommendation]
