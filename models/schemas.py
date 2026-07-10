@@ -51,3 +51,68 @@ class JobRecommendation(BaseModel):
 
 class JobMatchResponse(BaseModel):
     matched_jobs: List[JobRecommendation]
+
+
+class GeneratedEmail(BaseModel):
+    subject: str
+    body: str
+
+
+class EmailGenerationResponse(BaseModel):
+    email: GeneratedEmail
+
+
+class ApplicationCreate(BaseModel):
+    selected_job: Job
+    generated_email: GeneratedEmail
+    score: int
+    status: str = "pending"
+
+
+class ApplicationRecord(BaseModel):
+    id: int
+    selected_job: Job
+    generated_email: GeneratedEmail
+    score: int
+    status: str
+    created_at: str
+
+
+class ApplicationStoreResponse(BaseModel):
+    application: ApplicationRecord
+
+
+class ApplicationListResponse(BaseModel):
+    applications: List[ApplicationRecord]
+
+
+class ExtractSkillsRequest(BaseModel):
+    resume_text: str
+
+
+class SuggestRolesRequest(BaseModel):
+    profile: ResumeProfile
+
+
+class SearchJobsRequest(BaseModel):
+    role: str
+    location: str | None = None
+    max_results: int = 10
+
+
+class MatchJobsRequest(BaseModel):
+    profile: ResumeProfile
+    jobs: List[Job]
+
+
+class GenerateEmailRequest(BaseModel):
+    profile: ResumeProfile
+    selected_job: Job
+    match_result: JobRecommendation
+
+
+class CreateApplicationRequest(BaseModel):
+    selected_job: Job
+    generated_email: GeneratedEmail
+    score: int
+    status: str = "pending"

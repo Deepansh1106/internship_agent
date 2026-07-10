@@ -8,11 +8,12 @@ Extract:
 3. Education
 4. Projects
 
-Return ONLY valid JSON.
+Instructions:
+- Return only valid structured output.
+- Do not invent skills, education, projects, or experience.
+- Keep each item concise.
 
 Resume:
 
 {resume_text}
-
-{format_instructions}
 """

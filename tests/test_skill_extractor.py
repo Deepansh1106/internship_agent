@@ -1,26 +1,56 @@
+from types import SimpleNamespace
+from unittest import TestCase, main
+from unittest.mock import MagicMock, patch
+
+from models.schemas import ResumeProfile
 from tools.skill_extractor import SkillExtractor
 
 
-sample_resume = """
-Deepansh Kumar
+class TestSkillExtractor(TestCase):
 
-Skills:
-Python, FastAPI, SQL, Machine Learning
+    @patch("tools.skill_extractor.OpenAI")
+    def test_skill_extractor_returns_structured_profile(self, mock_openai):
+        mock_client = MagicMock()
+        mock_client.responses.parse.return_value = SimpleNamespace(
+            output_parsed=ResumeProfile(
+                skills=[
+                    "Python",
+                    "FastAPI",
+                    "SQL",
+                    "Machine Learning"
+                ],
+                experience=[
+                    "Backend Development Intern"
+                ],
+                education=[
+                    "B.Tech Computer Science"
+                ],
+                projects=[
+                    "Autonomous Internship Application Agent"
+                ],
+            )
+        )
+        mock_openai.return_value = mock_client
 
-Projects:
-Autonomous Internship Application Agent
-Food Delivery Time Prediction
+        extractor = SkillExtractor()
+        result = extractor.extract("Sample resume text")
 
-Education:
-B.Tech Computer Science
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["skills"][0], "Python")
+        mock_client.responses.parse.assert_called_once()
 
-Experience:
-Backend Development Intern
-"""
+    @patch("tools.skill_extractor.OpenAI")
+    def test_skill_extractor_returns_error_on_failure(self, mock_openai):
+        mock_client = MagicMock()
+        mock_client.responses.parse.side_effect = RuntimeError("LLM failed")
+        mock_openai.return_value = mock_client
+
+        extractor = SkillExtractor()
+        result = extractor.extract("Sample resume text")
+
+        self.assertFalse(result["success"])
+        self.assertIn("LLM failed", result["error"])
 
 
-extractor = SkillExtractor()
-
-result = extractor.extract(sample_resume)
-
-print(result)
+if __name__ == "__main__":
+    main()
