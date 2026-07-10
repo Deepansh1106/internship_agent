@@ -6,7 +6,7 @@ Built with **LangGraph** for orchestration and **Streamlit** for the UI, backed 
 
 ---
 
-## ✨ Features
+##  Features
 
 - **Resume Parsing** — Upload a PDF resume and automatically extract skills, work experience, and education.
 - **Role Suggestion** — Get AI-suggested job titles/roles based on your extracted profile.
@@ -19,52 +19,18 @@ Built with **LangGraph** for orchestration and **Streamlit** for the UI, backed 
 
 ---
 
-## 🧠 How It Works (Agent Graph)
+##  How It Works (Agent Graph)
 
 The agent is implemented as a LangGraph state machine with the following flow:
 
-```
-__start__
-   │
-   ▼
-resume_reader          → parses the uploaded PDF resume
-   │
-   ▼
-skill_extractor         → extracts skills, experience, education
-   │
-   ▼
-job_role_specifier      → suggests candidate job roles/titles
-   │
-   ▼
-human_role_selection    → 🧑 user approves/edits suggested roles
-   │
-   ▼
-job_search               → searches live postings for approved roles
-   │
-   ▼
-job_matcher              → scores/ranks jobs against the resume profile
-   │
-   ▼
-human_job_selection      → 🧑 user selects jobs to apply to
-   │
-   ▼
-email_generator           → drafts a tailored application email per job
-   │
-   ▼
-human_approval             → 🧑 user reviews/edits the email
-   │
-   ▼
-application_store          → saves the approved application
-   │
-   ▼
-__end__
-```
+<img width="708" height="1086" alt="image" src="https://github.com/user-attachments/assets/b98e002b-a906-46ea-8e88-c7454cb5c896" />
+
 
 Every node can also short-circuit directly to `__end__` (e.g., if the user cancels, no jobs match, or an error occurs), which is why the diagram shows dotted edges from each node straight to the end state.
 
 ---
 
-## 🖥️ App Pages (Streamlit)
+##  App Pages (Streamlit)
 
 | Page | Description |
 |---|---|
@@ -76,7 +42,7 @@ Every node can also short-circuit directly to `__end__` (e.g., if the user cance
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Orchestration:** LangGraph (Python state graph for agent workflow)
 - **Backend:** FastAPI (served at `http://127.0.0.1:8000`)
@@ -87,7 +53,7 @@ Every node can also short-circuit directly to `__end__` (e.g., if the user cance
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 ```
 INTERNSHIP-AGENT/
@@ -155,7 +121,7 @@ INTERNSHIP-AGENT/
 
 ---
 
-## ⚙️ Installation
+##  Installation
 
 1. **Clone the repository**
    ```bash
@@ -185,7 +151,7 @@ INTERNSHIP-AGENT/
 
 ---
 
-## ▶️ Usage
+##  Usage
 
 1. **Start the backend (FastAPI + LangGraph agent)**
    ```bash
@@ -206,7 +172,7 @@ INTERNSHIP-AGENT/
 
 ---
 
-## 🗺️ Roadmap / Ideas
+##  Roadmap / Ideas
 
 - [ ] Auto-submit applications via job board APIs
 - [ ] Support multiple resume versions/profiles
@@ -216,12 +182,26 @@ INTERNSHIP-AGENT/
 
 ---
 
-## 🤝 Contributing
+##  License
 
-Contributions, issues, and feature requests are welcome. Feel free to open a PR or issue.
+MIT License
 
----
+Copyright (c) 2026 Deepansh Kumar
 
-## 📄 License
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-[Add your license here, e.g. MIT]
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
