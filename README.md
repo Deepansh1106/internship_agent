@@ -90,27 +90,68 @@ Every node can also short-circuit directly to `__end__` (e.g., if the user cance
 ## 📂 Project Structure
 
 ```
-.
+INTERNSHIP-AGENT/
 ├── backend/
-│   ├── main.py              # FastAPI app entrypoint
-│   ├── graph.py             # LangGraph workflow definition
-│   ├── nodes/                # Individual node implementations
-│   │   ├── resume_reader.py
-│   │   ├── skill_extractor.py
-│   │   ├── job_role_specifier.py
-│   │   ├── job_search.py
-│   │   ├── job_matcher.py
-│   │   ├── email_generator.py
-│   │   └── application_store.py
-│   └── models.py             # Pydantic schemas
+│   ├── __init__.py
+│   └── main.py                    # FastAPI app entrypoint
+│
 ├── frontend/
-│   └── app.py                 # Streamlit UI
-├── requirements.txt
-├── .env.example
+│   ├── __init__.py
+│   └── streamlit_app.py           # Streamlit UI
+│
+├── models/
+│   ├── __init__.py
+│   └── schemas.py                 # Pydantic schemas / data models
+│
+├── prompts/
+│   ├── __init__.py
+│   ├── email_prompt.py            # Prompt template for email_generator
+│   ├── job_match_prompt.py        # Prompt template for job_matcher
+│   ├── job_role_prompt.py         # Prompt template for job_role_specifier
+│   └── skill_prompt.py            # Prompt template for skill_extractor
+│
+├── tools/
+│   ├── __init__.py
+│   ├── resume_reader.py           # Node: parses uploaded PDF resume
+│   ├── skill_extractor.py         # Node: extracts skills/experience/education
+│   ├── job_role_specifier.py      # Node: suggests candidate job roles
+│   ├── job_search.py              # Node: searches live job postings
+│   ├── job_matcher.py             # Node: scores/ranks jobs against profile
+│   ├── email_generator.py         # Node: drafts application emails
+│   └── application_store.py       # Node: saves approved applications
+│
+├── workflows/
+│   ├── __init__.py
+│   ├── internship_workflow.py     # LangGraph state graph definition (the agent)
+│   └── graph_view.py               # Script to render/export the workflow diagram
+│
+├── tests/
+│   ├── __init__.py
+│   ├── test_backend_api.py
+│   ├── test_internship_workflow.py
+│   ├── test_resume_reader.py
+│   ├── test_skill_extractor.py
+│   ├── test_job_specifier.py
+│   ├── test_job_search.py
+│   ├── test_job_matcher.py
+│   ├── test_email_generator.py
+│   └── test_application_store.py
+│
+├── venv/                          # Virtual environment (not committed)
+├── .env                            # API keys / secrets (not committed)
+├── .gitignore
+├── applications.db                 # SQLite DB storing saved applications
+├── workflow.png                    # Exported graph diagram
 └── README.md
 ```
 
-*(Adjust this tree to match your actual folder layout.)*
+**Module responsibilities:**
+- `tools/` — the actual implementation of each LangGraph node (one file per node)
+- `prompts/` — LLM prompt templates, kept separate from the node logic that uses them
+- `workflows/internship_workflow.py` — wires all the `tools/` nodes together into the LangGraph state graph
+- `workflows/graph_view.py` — utility to visualize the graph (produces `workflow.png`)
+- `models/schemas.py` — shared Pydantic models used across backend, tools, and frontend
+- `applications.db` — persistent storage backing the **Application History** page
 
 ---
 
@@ -153,7 +194,7 @@ Every node can also short-circuit directly to `__end__` (e.g., if the user cance
 
 2. **Start the frontend (Streamlit)**
    ```bash
-   streamlit run frontend/app.py
+   streamlit run frontend/streamlit_app.py
    ```
 
 3. Open the Streamlit app in your browser (usually `http://localhost:8501`), and:
