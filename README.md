@@ -42,17 +42,6 @@ Every node can also short-circuit directly to `__end__` (e.g., if the user cance
 
 ---
 
-##  Tech Stack
-
-- **Orchestration:** LangGraph (Python state graph for agent workflow)
-- **Backend:** FastAPI (served at `http://127.0.0.1:8000`)
-- **Frontend:** Streamlit
-- **LLM:** [add your model provider here, e.g. OpenAI / Anthropic Claude / local model]
-- **Resume Parsing:** PDF text extraction (e.g. `pypdf` / `pdfplumber`)
-- **Job Search:** [add your job search API/source here]
-
----
-
 ##  Project Structure
 
 ```
