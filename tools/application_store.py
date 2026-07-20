@@ -258,3 +258,23 @@ class ApplicationStore:
                 "success": False,
                 "error": str(e)
             }
+
+    def clear_applications(self) -> dict[str, Any]:
+        """Delete all saved applications and return how many were removed."""
+        try:
+            with self._connect() as connection:
+                cursor = connection.execute("DELETE FROM applications")
+
+            return {
+                "success": True,
+                "data": {
+                    "deleted": True,
+                    "count": cursor.rowcount,
+                }
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }

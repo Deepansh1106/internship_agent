@@ -20,17 +20,34 @@ class SkillExtractor:
     def extract(self, resume_text: str):
 
         try:
-            response = self.client.responses.parse(
+            response = self.client.chat.completions.create(
                 model="openai/gpt-oss-20b",
-                input=SKILL_EXTRACTION_PROMPT.format(
-                    resume_text=resume_text
-                ),
-                text_format=ResumeProfile,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Return only JSON matching the supplied schema.",
+                    },
+                    {
+                        "role": "user",
+                        "content": SKILL_EXTRACTION_PROMPT.format(resume_text=resume_text),
+                    },
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "resume_profile",
+                        "strict": True,
+                        "schema": ResumeProfile.model_json_schema(),
+                    },
+                },
+            )
+            profile = ResumeProfile.model_validate_json(
+                response.choices[0].message.content
             )
 
             return {
                 "success": True,
-                "data": response.output_parsed.model_dump()
+                "data": profile.model_dump()
             }
 
         except Exception as e:

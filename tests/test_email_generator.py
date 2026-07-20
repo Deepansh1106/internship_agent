@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 from unittest import TestCase, main
 from unittest.mock import MagicMock, patch
@@ -55,11 +56,17 @@ class TestEmailGenerator(TestCase):
         }
 
         mock_client = MagicMock()
-        mock_client.responses.parse.return_value = SimpleNamespace(
-            output_parsed=GeneratedEmail(
-                subject="Application for Backend Engineer Intern",
-                body="Dear Hiring Team,\n\nI am interested in the Backend Engineer Intern role."
-            )
+        mock_client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content=json.dumps({
+                            "subject": "Application for Backend Engineer Intern",
+                            "body": "Dear Hiring Team,\n\nI am interested in the Backend Engineer Intern role.",
+                        })
+                    )
+                )
+            ]
         )
         mock_openai.return_value = mock_client
 

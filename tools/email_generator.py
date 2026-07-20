@@ -44,13 +44,28 @@ class EmailGenerator:
                 missing_skills=match_result.get("missing_skills", []),
             )
 
-            response = self.client.responses.parse(
+            response = self.client.chat.completions.create(
                 model="openai/gpt-oss-20b",
-                input=prompt,
-                text_format=GeneratedEmail,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Return only JSON matching the supplied schema.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "application_email",
+                        "strict": True,
+                        "schema": GeneratedEmail.model_json_schema(),
+                    },
+                },
             )
 
-            generated_email = response.output_parsed
+            generated_email = GeneratedEmail.model_validate_json(
+                response.choices[0].message.content
+            )
 
             return {
                 "success": True,

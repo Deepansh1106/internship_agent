@@ -2,24 +2,17 @@ import shutil
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
+from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException, UploadFile
+from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi.encoders import jsonable_encoder
+from langgraph.types import Command
 
 from models.schemas import (
-    CreateApplicationRequest,
-    ExtractSkillsRequest,
-    GenerateEmailRequest,
-    MatchJobsRequest,
-    SearchJobsRequest,
-    SuggestRolesRequest,
+    WorkflowResumeRequest,
 )
 from tools.application_store import ApplicationStore
-from tools.email_generator import EmailGenerator
-from tools.job_matcher import JobMatcher
-from tools.job_role_specifier import JobRoleSpecifier
-from tools.job_search import JobSearcher
-from tools.resume_reader import ResumeReader
-from tools.skill_extractor import SkillExtractor
+from workflows.internship_workflow import build_internship_workflow
 
 
 app = FastAPI(
@@ -27,26 +20,35 @@ app = FastAPI(
     version="1.0.0",
 )
 
-skill_extractor = SkillExtractor()
-job_role_specifier = JobRoleSpecifier()
-job_searcher = JobSearcher()
-job_matcher = JobMatcher()
-email_generator = EmailGenerator()
+# This compiled graph owns the order in which tools run.
+workflow = build_internship_workflow()
 application_store = ApplicationStore()
 
 
-def handle_tool_result(result: dict[str, Any]) -> dict[str, Any]:
-    if result["success"]:
-        return result["data"]
+def workflow_response(result: dict[str, Any], thread_id: str) -> dict[str, Any]:
+    """Return graph state plus the next human decision, if the graph paused."""
+    interrupts = result.get("__interrupt__", [])
+    interrupt_value = interrupts[0].value if interrupts else None
 
-    raise HTTPException(
-        status_code=400,
-        detail=result.get("error", "Unknown backend error"),
-    )
+    state = {
+        key: value
+        for key, value in result.items()
+        if key != "__interrupt__"
+    }
+    return jsonable_encoder({
+        "thread_id": thread_id,
+        "state": state,
+        "interrupt": interrupt_value,
+    })
 
 
-@app.post("/upload-resume")
-async def upload_resume(file: UploadFile) -> dict[str, Any]:
+@app.post("/workflow/start")
+async def start_workflow(
+    file: UploadFile,
+    location: str = Form("Remote"),
+    max_results: int = Form(10),
+) -> dict[str, Any]:
+    """Start a graph run. It continues until LangGraph reaches an interrupt."""
     suffix = Path(file.filename or "").suffix or ".pdf"
 
     try:
@@ -54,86 +56,54 @@ async def upload_resume(file: UploadFile) -> dict[str, Any]:
             shutil.copyfileobj(file.file, temp_file)
             temp_path = temp_file.name
 
-        result = ResumeReader.extract_text(temp_path)
-
-        if result["success"]:
-            return {
-                "text": result["text"]
-            }
-
-        raise HTTPException(
-            status_code=400,
-            detail=result.get("error", "Resume upload failed"),
+        thread_id = str(uuid4())
+        result = workflow.invoke(
+            {
+                "resume_file_path": temp_path,
+                "delete_resume_file": True,
+                "location": location or None,
+                "max_results": max_results,
+            },
+            {"configurable": {"thread_id": thread_id}},
         )
+        return workflow_response(result, thread_id)
 
-    finally:
+    except Exception as error:
         if "temp_path" in locals():
             Path(temp_path).unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-@app.post("/extract-skills")
-def extract_skills(request: ExtractSkillsRequest) -> dict[str, Any]:
-    result = skill_extractor.extract(request.resume_text)
+@app.post("/workflow/resume")
+def resume_workflow(request: WorkflowResumeRequest) -> dict[str, Any]:
+    """Give a human decision to LangGraph and let it choose the next nodes."""
+    try:
+        result = workflow.invoke(
+            Command(resume=request.resume_value),
+            {"configurable": {"thread_id": request.thread_id}},
+        )
+        return workflow_response(result, request.thread_id)
 
-    return handle_tool_result(result)
-
-
-@app.post("/suggest-roles")
-def suggest_roles(request: SuggestRolesRequest) -> dict[str, Any]:
-    result = job_role_specifier.suggest(request.profile.model_dump())
-
-    return handle_tool_result(result)
-
-
-@app.post("/search-jobs")
-def search_jobs(request: SearchJobsRequest) -> dict[str, Any]:
-    result = job_searcher.search(
-        role=request.role,
-        location=request.location,
-        max_results=request.max_results,
-    )
-
-    return handle_tool_result(result)
-
-
-@app.post("/match-jobs")
-def match_jobs(request: MatchJobsRequest) -> dict[str, Any]:
-    result = job_matcher.match(
-        profile=request.profile.model_dump(),
-        jobs=[
-            job.model_dump()
-            for job in request.jobs
-        ],
-    )
-
-    return handle_tool_result(result)
-
-
-@app.post("/generate-email")
-def generate_email(request: GenerateEmailRequest) -> dict[str, Any]:
-    result = email_generator.generate(
-        profile=request.profile.model_dump(),
-        selected_job=request.selected_job.model_dump(),
-        match_result=request.match_result.model_dump(),
-    )
-
-    return handle_tool_result(result)
-
-
-@app.post("/applications")
-def create_application(request: CreateApplicationRequest) -> dict[str, Any]:
-    result = application_store.create_application(
-        selected_job=request.selected_job.model_dump(),
-        generated_email=request.generated_email.model_dump(),
-        score=request.score,
-        status=request.status,
-    )
-
-    return handle_tool_result(result)
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get("/applications")
 def list_applications() -> dict[str, Any]:
     result = application_store.list_applications()
 
-    return handle_tool_result(result)
+    if result["success"]:
+        return result["data"]
+
+    raise HTTPException(status_code=400, detail=result["error"])
+
+
+@app.delete("/applications")
+def clear_applications() -> dict[str, Any]:
+    """Clear saved history. This does not affect a running LangGraph workflow."""
+    result = application_store.clear_applications()
+
+    if result["success"]:
+        return result["data"]
+
+    raise HTTPException(status_code=400, detail=result["error"])

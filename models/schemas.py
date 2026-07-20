@@ -1,14 +1,16 @@
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, ConfigDict
+from typing import Any, List
 
 
 class ResumeProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     skills: List[str]
     experience: List[str]
     education: List[str]
     projects: List[str]
 
 class JobRoles(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     roles: List[str]
 
 class Job(BaseModel):
@@ -33,6 +35,7 @@ class JobSearchResponse(BaseModel):
     jobs: List[Job]
 
 class MatchEvaluation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     score: int
     reasoning: str
     strengths: List[str]
@@ -54,6 +57,7 @@ class JobMatchResponse(BaseModel):
 
 
 class GeneratedEmail(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     subject: str
     body: str
 
@@ -116,3 +120,10 @@ class CreateApplicationRequest(BaseModel):
     generated_email: GeneratedEmail
     score: int
     status: str = "pending"
+
+
+class WorkflowResumeRequest(BaseModel):
+    """The value supplied by a user when resuming a paused LangGraph run."""
+
+    thread_id: str
+    resume_value: Any

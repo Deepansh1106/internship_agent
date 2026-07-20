@@ -234,6 +234,29 @@ class TestInternshipWorkflow(TestCase):
         for edge in expected_edges:
             self.assertIn(edge, mermaid)
 
+    def test_email_approval_accepts_an_edited_email(self):
+        generated_emails = [
+            {
+                "job": {"job_id": "1"},
+                "score": 88,
+                "email": {"subject": "Original", "body": "Original body"},
+            }
+        ]
+
+        approved = self.workflow._resolve_approval(
+            {
+                "approved_applications": [
+                    {
+                        "job_id": "1",
+                        "email": {"subject": "Edited", "body": "Edited body"},
+                    }
+                ]
+            },
+            generated_emails,
+        )
+
+        self.assertEqual(approved[0]["email"]["subject"], "Edited")
+
 
 if __name__ == "__main__":
     main()

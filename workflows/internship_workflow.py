@@ -1,9 +1,11 @@
 from typing import Any, TypedDict
+from pathlib import Path
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
+from models.schemas import GeneratedEmail
 from tools.application_store import ApplicationStore
 from tools.email_generator import EmailGenerator
 from tools.job_matcher import JobMatcher
@@ -15,6 +17,7 @@ from tools.skill_extractor import SkillExtractor
 
 class InternshipWorkflowState(TypedDict, total=False):
     resume_file_path: str
+    delete_resume_file: bool
     location: str
     max_results: int
     application_db_path: str
@@ -144,12 +147,44 @@ class InternshipApplicationWorkflow:
                 )
                 continue
 
+            if isinstance(item, dict):
+                job_id = item.get("job_id")
+                matching_application = next(
+                    (
+                        application
+                        for application in generated_emails
+                        if application["job"]["job_id"] == job_id
+                    ),
+                    None,
+                )
+
+                if matching_application is None:
+                    raise ValueError(f"Invalid approval selection: {job_id}")
+
+                # The frontend may send an edited email with its approval.
+                # Pydantic validates the edited subject and body before storage.
+                email = GeneratedEmail(
+                    **item.get("email", matching_application["email"])
+                ).model_dump()
+                approved_applications.append({
+                    "job": matching_application["job"],
+                    "score": matching_application["score"],
+                    "email": email,
+                })
+                continue
+
             raise ValueError(f"Invalid approval selection: {item}")
 
         return approved_applications
 
     def read_resume(self, state: InternshipWorkflowState) -> dict[str, Any]:
-        result = ResumeReader.extract_text(state["resume_file_path"])
+        try:
+            result = ResumeReader.extract_text(state["resume_file_path"])
+        finally:
+            # The API creates a temporary copy of an uploaded resume. It is no
+            # longer needed once this first graph node has read it.
+            if state.get("delete_resume_file"):
+                Path(state["resume_file_path"]).unlink(missing_ok=True)
 
         if not result["success"]:
             return self._tool_error(result)

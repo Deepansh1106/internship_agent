@@ -1,59 +1,52 @@
-from tools.job_matcher import JobMatcher
 import json
+from types import SimpleNamespace
+from unittest import TestCase, main
+from unittest.mock import MagicMock, patch
 
-profile = {
-    "skills": [
-        "Python",
-        "FastAPI",
-        "SQL",
-        "Machine Learning"
-    ],
-    "experience": [
-        "Backend Development Intern"
-    ],
-    "education": [
-        "B.Tech Computer Science"
-    ],
-    "projects": [
-        "Autonomous Internship Application Agent"
-    ]
-}
+from tools.job_matcher import JobMatcher
 
-jobs = [
-    {
-        "job_id": "1",
-        "title": "Backend Engineer Intern",
-        "company": "Optiver",
-        "location": "Austin",
 
-        "description": "Looking for Python, FastAPI, SQL and Docker.",
+class TestJobMatcher(TestCase):
 
-        "source": "LinkedIn",
-        "source_link": "",
-        "apply_option": "",
-        "posted_at": "2 days ago",
-        "employment_type": "Internship",
-        "salary": ""
-    },
-    {
-        "job_id": "2",
-        "title": "ML Engineer Intern",
-        "company": "Adobe",
-        "location": "Remote",
+    @patch("tools.job_matcher.OpenAI")
+    def test_matcher_reads_strict_json_response(self, mock_openai):
+        job = {
+            "job_id": "1",
+            "title": "Backend Engineer Intern",
+            "company": "Example",
+            "location": "Remote",
+            "description": "Python and FastAPI internship.",
+            "source": "LinkedIn",
+            "source_link": "",
+            "apply_option": "",
+            "posted_at": "Today",
+            "employment_type": "Internship",
+            "salary": "",
+        }
+        client = MagicMock()
+        client.chat.completions.create.return_value = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(
+                        content=json.dumps({
+                            "score": 88,
+                            "reasoning": "Strong Python and FastAPI fit.",
+                            "strengths": ["Python", "FastAPI"],
+                            "missing_skills": [],
+                        })
+                    )
+                )
+            ]
+        )
+        mock_openai.return_value = client
 
-        "description": "Machine Learning, TensorFlow, Python.",
+        result = JobMatcher().match({"skills": ["Python", "FastAPI"]}, [job])
 
-        "source": "LinkedIn",
-        "source_link": "",
-        "apply_option": "",
-        "posted_at": "1 day ago",
-        "employment_type": "Internship",
-        "salary": ""
-    }
-]
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["matched_jobs"][0]["score"], 88)
+        request = client.chat.completions.create.call_args.kwargs
+        self.assertTrue(request["response_format"]["json_schema"]["strict"])
 
-matcher = JobMatcher()
 
-result = matcher.match(profile, jobs)
-
-print(json.dumps(result, indent=4))
+if __name__ == "__main__":
+    main()

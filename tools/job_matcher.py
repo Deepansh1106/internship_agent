@@ -39,13 +39,28 @@ class JobMatcher:
                     job_description=job["description"],
                 )
 
-                response = self.client.responses.parse(
+                response = self.client.chat.completions.create(
                     model="openai/gpt-oss-20b",
-                    input=prompt,
-                    text_format=MatchEvaluation,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Return only JSON matching the supplied schema.",
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "job_match_evaluation",
+                            "strict": True,
+                            "schema": MatchEvaluation.model_json_schema(),
+                        },
+                    },
                 )
 
-                evaluation = response.output_parsed
+                evaluation = MatchEvaluation.model_validate_json(
+                    response.choices[0].message.content
+                )
 
                 recommendation = JobRecommendation(
                     job=Job(**job),

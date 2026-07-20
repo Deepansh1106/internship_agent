@@ -102,6 +102,24 @@ class TestApplicationStore(TestCase):
         self.assertTrue(delete_result["success"])
         self.assertFalse(get_result["success"])
 
+    def test_clear_applications(self):
+        self.store.create_application(
+            selected_job=self.selected_job,
+            generated_email=self.generated_email,
+            score=88,
+        )
+        self.store.create_application(
+            selected_job=self.selected_job,
+            generated_email=self.generated_email,
+            score=90,
+        )
+
+        result = self.store.clear_applications()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["count"], 2)
+        self.assertEqual(self.store.list_applications()["data"]["applications"], [])
+
 
 if __name__ == "__main__":
     main()
